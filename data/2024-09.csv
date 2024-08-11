@@ -1,6 +1,5 @@
-name, team, cost
-test-1, A, 0.012
-test-2, B, 0.120
-test-3, A, 0.042
-test-4, A, 0.022
-
+name,team,cost
+test-1,A,0.012
+test-2,B,0.120
+test-3,A,0.042
+test-4,A,0.022
