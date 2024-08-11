@@ -10,5 +10,10 @@
     {
       "path": "./tsconfig.vitest.json"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*", "test/**/*.ts", "vitest.d.ts", "vitest.setup.ts"],
+  "exclude": ["node_modules", "cdk.out"]
 }
