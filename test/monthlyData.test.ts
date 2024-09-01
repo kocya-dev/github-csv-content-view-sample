@@ -1,4 +1,3 @@
-import exp = require('constants')
 import { MonthlyData } from '../src/model/domain/monthlyData'
 
 describe('MonthlyData', () => {
