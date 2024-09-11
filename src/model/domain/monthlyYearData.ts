@@ -1,11 +1,12 @@
 import { MonthlyData } from './monthlyData'
+import type { MonthlyDataRecord } from './monthlyData'
 import dayjs from 'dayjs'
 
 export interface MonthlyYearDataRecord {
   name: string
   team: string
   labels: string[]
-  costs: number[]
+  data: MonthlyDataRecord[][]
 }
 
 export class MonthlyYearData {
@@ -43,14 +44,14 @@ export class MonthlyYearData {
       }
     }
 
-    const costs: (number | undefined)[] = await Promise.all(
+    const data: (MonthlyDataRecord[] | undefined)[] = await Promise.all(
       this.monthlyDataList.map((m) => m.find(name, team))
     )
     return {
       name: name,
       team,
       labels: this.labels,
-      costs
+      data
     } as MonthlyYearDataRecord
   }
 }

@@ -3,16 +3,22 @@
     <h1 class="green">{{ msg }}</h1>
     <h3>Monthly</h3>
   </div>
-  <Bar :data="data" :options="options" />
-
-  <div style="white-space: pre-wrap">{{ text }}</div>
-  <button @click="onClick">click</button>
+  <!-- <BarChart :title="text" :labels="labels" :dataList="dataList" /> -->
+  <div :v-if="isVisible">
+    <Bar :data="tmp" :options="options" />
+    <div class="h-[100px] w-[100px]">
+      <canvas id="barChartCanvas" style="width: 100%; height: 100%" />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { MonthlyData } from '../model/domain/monthlyData'
-import { ref, onMounted, computed } from 'vue'
-import type { ChartData, ChartOptions } from 'chart.js'
+import BarChart from './BarChart.vue'
+import { MonthlyYearData } from '../model/domain/monthlyYearData'
+import type { MonthlyYearDataRecord } from '../model/domain/monthlyYearData'
+import type { MonthlyDataRecord } from '../model/domain/monthlyData'
+import { ref, onMounted, reactive, computed } from 'vue'
+import type { ChartData, ChartOptions, ChartDataset } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -26,73 +32,169 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const props = defineProps<{ msg: string }>()
-const month = new MonthlyData(2024, 8)
-const text = ref('')
+const sourceData = new MonthlyYearData(2024)
+const srcRef = ref<MonthlyYearDataRecord>()
+const tmp = reactive<ChartData<'bar'>>({ labels: [], datasets: [] })
+const isVisible = ref(false)
+const sample = ref(null)
 
-const makeData = async () => {
-  const records = await month.get()
-  let str = props.msg
-  records.forEach((r) => {
-    str += `${r.name}, ${r.team}, ${r.cost}\n`
-  })
-  text.value = str
-}
+onMounted(async () => {
+  isVisible.value = false
+  srcRef.value = await sourceData.find('', 'A')
 
-const labels = computed(() => {
-  let labels = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
-  ]
-  return labels
-})
+  const inputData: MonthlyDataRecord[][] | undefined = srcRef.value?.data
 
-const data: ChartData<'bar'> = {
-  labels: ['2024-06', '2024-07', '2024-08', '2024-09'],
-  datasets: [
-    {
-      label: 'タイトル',
-      backgroundColor: '#E2E2E2',
-      data: [40, 20, 12, 39, 10, 40, 39, 80, 40, 20, 12, 11]
-    }
-  ]
-}
-const options: ChartOptions<'bar'> = {
-  responsive: true,
-  maintainAspectRatio: true,
-  plugins: {
-    legend: {
-      display: true,
-      align: 'start',
-      labels: {
-        boxWidth: 0
-      }
-    }
-  },
-  scales: {
-    y: {
-      ticks: {
-        stepSize: 1
+  const teams = new Set<string>()
+  for (const d of inputData as MonthlyDataRecord[][]) {
+    if (!d) continue
+    d.map((r) => teams.add(r.team))
+  }
+  const dataSet: { [key: string]: number[] } = {}
+  for (const t of teams) {
+    dataSet[t] = new Array(inputData!.length).fill(0)
+  }
+
+  for (let i = 0; i < inputData!.length; i++) {
+    const d = inputData![i]
+    if (!d) continue
+    for (const t of teams) {
+      const result: number = d.filter((r) => r.team === t).reduce((sum, r) => sum + r.cost, 0)
+      if (result) {
+        dataSet[t][i] += result
       }
     }
   }
-}
-onMounted(async () => {
-  await makeData()
+
+  const makeDataSet: ChartDataset<'bar', (number | [number, number] | null)[]>[] = []
+  const colors: string[] = ['#00E2E2', '#80E2E2', '#E200E2', '#E280E2', '#E2E200']
+  let i = 0
+  for (const t of teams) {
+    makeDataSet.push({
+      label: t,
+      data: dataSet[t],
+      backgroundColor: colors[i],
+      borderWidth: 1
+    })
+    i++
+  }
+
+  tmp.labels = srcRef.value?.labels
+  tmp.datasets = makeDataSet
+
+  const opt: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      title: {
+        display: true,
+        text: 'xxxxx'
+      },
+      legend: {
+        display: true,
+        align: 'start',
+        labels: {
+          boxWidth: 0
+        }
+      }
+    },
+    scales: {
+      y: {
+        stacked: true,
+        ticks: {
+          stepSize: 0.005
+        }
+      }
+    }
+  }
+  var canvas = <HTMLCanvasElement>document.getElementById('barChartCanvas')
+  const ctx = canvas.getContext('2d')
+  new ChartJS(ctx!, {
+    type: 'bar',
+    data: {
+      labels: srcRef.value?.labels,
+      datasets: makeDataSet
+    },
+    options: opt
+  })
+  isVisible.value = true
 })
 
-const onClick = async () => {
-  await makeData()
-}
+const labels = computed(() => {
+  return srcRef.value?.labels as string[]
+})
+const getDataSet = computed(() => {
+  return srcRef.value?.data
+})
+const data = computed(async () => {
+  srcRef.value = await sourceData.find('', 'A')
+
+  const inputData: MonthlyDataRecord[][] | undefined = srcRef.value?.data
+
+  const teams = new Set<string>()
+  for (const d of inputData as MonthlyDataRecord[][]) {
+    d.map((r) => teams.add(r.team))
+  }
+  const dataSet: { [key: string]: number[] } = {}
+  for (const t of teams) {
+    dataSet[t] = new Array(inputData!.length).fill(0)
+  }
+
+  for (let i = 0; i < inputData!.length; i++) {
+    const d = inputData![i]
+    for (const t of teams) {
+      const result: number = d.filter((r) => r.team === t).reduce((sum, r) => sum + r.cost, 0)
+      if (result) {
+        dataSet[t][i] += result
+      }
+    }
+  }
+
+  const makeDataSet: ChartDataset<'bar', (number | [number, number] | null)[]>[] = []
+  const colors: string[] = ['#00E2E2', '#80E2E2', '#E200E2', '#E280E2', '#E2E200']
+  let i = 0
+  for (const t of teams) {
+    makeDataSet.push({
+      label: t,
+      data: dataSet[t],
+      backgroundColor: colors[i]
+    })
+    i++
+  }
+
+  const tmp: ChartData<'bar'> = {
+    labels: srcRef.value?.labels,
+    datasets: makeDataSet
+  }
+  return tmp
+})
+const options = computed(() => {
+  const opt: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      title: {
+        display: true,
+        text: 'xxxxx'
+      },
+      legend: {
+        display: true,
+        align: 'start',
+        labels: {
+          boxWidth: 0
+        }
+      }
+    },
+    scales: {
+      y: {
+        stacked: true,
+        ticks: {
+          stepSize: 0.005
+        }
+      }
+    }
+  }
+  return opt
+})
 </script>
 
 <style scoped>
