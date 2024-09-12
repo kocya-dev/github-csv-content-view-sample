@@ -41,7 +41,7 @@ const isVisible = ref(false)
 
 onMounted(async () => {
   isVisible.value = false
-  srcRef.value = await sourceData.find('', 'A')
+  srcRef.value = await sourceData.find('', '')
 
   const inputData: MonthlyDataRecord[][] | undefined = srcRef.value?.data
 
@@ -99,6 +99,9 @@ onMounted(async () => {
       }
     },
     scales: {
+      x: {
+        stacked: true
+      },
       y: {
         stacked: true,
         ticks: {
