@@ -5,8 +5,9 @@
   </div>
   <!-- <BarChart :title="text" :labels="labels" :dataList="dataList" /> -->
   <div :v-if="isVisible">
-    <Bar :data="tmp" :options="options" />
-    <div class="h-[100px] w-[100px]">
+    <!--<Bar :data="tmp" :options="options" />-->
+    <!--<div class="h-[100px] w-[100px]">-->
+    <div>
       <canvas id="barChartCanvas" style="width: 100%; height: 100%" />
     </div>
   </div>
@@ -22,6 +23,7 @@ import type { ChartData, ChartOptions, ChartDataset } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import {
   Chart as ChartJS,
+  BarController,
   Title,
   Tooltip,
   Legend,
@@ -29,14 +31,13 @@ import {
   CategoryScale,
   LinearScale
 } from 'chart.js'
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+ChartJS.register(BarController, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const props = defineProps<{ msg: string }>()
 const sourceData = new MonthlyYearData(2024)
 const srcRef = ref<MonthlyYearDataRecord>()
 const tmp = reactive<ChartData<'bar'>>({ labels: [], datasets: [] })
 const isVisible = ref(false)
-const sample = ref(null)
 
 onMounted(async () => {
   isVisible.value = false
@@ -83,7 +84,7 @@ onMounted(async () => {
 
   const opt: ChartOptions<'bar'> = {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     plugins: {
       title: {
         display: true,
@@ -101,7 +102,7 @@ onMounted(async () => {
       y: {
         stacked: true,
         ticks: {
-          stepSize: 0.005
+          stepSize: 0.002
         }
       }
     }
@@ -118,7 +119,7 @@ onMounted(async () => {
   })
   isVisible.value = true
 })
-
+/*
 const labels = computed(() => {
   return srcRef.value?.labels as string[]
 })
@@ -195,6 +196,7 @@ const options = computed(() => {
   }
   return opt
 })
+  */
 </script>
 
 <style scoped>
