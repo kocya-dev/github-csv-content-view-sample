@@ -36,9 +36,11 @@ export class MonthlyYearData {
   // get monthly data
   public async find(name: string = '', team: string = ''): Promise<MonthlyYearDataRecord> {
     if (this.monthlyDataList.length === 0 || this.getDate.isBefore(dayjs().subtract(1, 'day'))) {
+      console.log(`s-e: ${this.startDate.toISOString()} - ${this.endDate.toISOString()}`)
       this.getDate = dayjs()
       for (let date = this.startDate; date.isBefore(this.endDate); date = date.add(1, 'month')) {
-        const monthly = new MonthlyData(date.year(), date.month(), this.getDate)
+        console.log(date.toISOString())
+        const monthly = new MonthlyData(date.year(), date.month() + 1, this.getDate) // monthは0始まりなので+1して実際の月と同様に扱う
         this.monthlyDataList?.push(monthly)
         this.labels.push(monthly.getLabel())
       }
@@ -47,6 +49,8 @@ export class MonthlyYearData {
     const data: (MonthlyDataRecord[] | undefined)[] = await Promise.all(
       this.monthlyDataList.map((m) => m.find(name, team))
     )
+    console.log(this.labels)
+    console.log(data)
     return {
       name: name,
       team,

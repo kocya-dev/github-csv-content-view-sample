@@ -2,6 +2,14 @@
   <div class="greetings">
     <h1 class="green">{{ msg }}</h1>
     <h3>Monthly</h3>
+    <el-input
+      v-model="input"
+      style="width: 240px"
+      placeholder="Please input"
+      @keyup.enter="inputOnEnter"
+      @keypress="inputOnPress"
+    />
+    <el-button type="primary" v-on:click="onButtonSearch">検索</el-button>
   </div>
   <!-- <BarChart :title="text" :labels="labels" :dataList="dataList" /> -->
   <div :v-if="isVisible">
@@ -18,7 +26,7 @@ import BarChart from './BarChart.vue'
 import { MonthlyYearData } from '../model/domain/monthlyYearData'
 import type { MonthlyYearDataRecord } from '../model/domain/monthlyYearData'
 import type { MonthlyDataRecord } from '../model/domain/monthlyData'
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, defineComponent } from 'vue'
 import type { ChartData, ChartOptions, ChartDataset } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import {
@@ -38,10 +46,36 @@ const sourceData = new MonthlyYearData(2024)
 const srcRef = ref<MonthlyYearDataRecord>()
 const tmp = reactive<ChartData<'bar'>>({ labels: [], datasets: [] })
 const isVisible = ref(false)
+const input = ref('')
+let inputEnterFlag = false
+let chartIns: ChartJS | undefined = undefined
 
 onMounted(async () => {
+  await updateChart('')
+})
+
+computed(async () => {
+  await updateChart(input.value)
+})
+
+async function inputOnEnter() {
+  if (!inputEnterFlag) {
+    return
+  }
+  inputEnterFlag = false
+  await updateChart(input.value)
+}
+function inputOnPress() {
+  inputEnterFlag = true
+}
+
+async function onButtonSearch() {
+  await updateChart(input.value)
+}
+
+async function updateChart(keyword: string) {
   isVisible.value = false
-  srcRef.value = await sourceData.find('', '')
+  srcRef.value = await sourceData.find('', keyword)
 
   const inputData: MonthlyDataRecord[][] | undefined = srcRef.value?.data
 
@@ -94,7 +128,7 @@ onMounted(async () => {
         display: true,
         align: 'start',
         labels: {
-          boxWidth: 0
+          boxWidth: 20
         }
       }
     },
@@ -105,23 +139,32 @@ onMounted(async () => {
       y: {
         stacked: true,
         ticks: {
-          stepSize: 0.002
+          stepSize: 0.05
         }
       }
     }
   }
   var canvas = <HTMLCanvasElement>document.getElementById('barChartCanvas')
   const ctx = canvas.getContext('2d')
-  new ChartJS(ctx!, {
-    type: 'bar',
-    data: {
+  if (chartIns) {
+    chartIns.data = {
       labels: srcRef.value?.labels,
       datasets: makeDataSet
-    },
-    options: opt
-  })
+    }
+    chartIns.update()
+  } else {
+    chartIns = new ChartJS(ctx!, {
+      type: 'bar',
+      data: {
+        labels: srcRef.value?.labels,
+        datasets: makeDataSet
+      },
+      options: opt
+    })
+  }
   isVisible.value = true
-})
+}
+
 /*
 const labels = computed(() => {
   return srcRef.value?.labels as string[]

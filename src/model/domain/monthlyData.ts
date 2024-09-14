@@ -4,14 +4,15 @@ import dayjs from 'dayjs'
 import { round } from '../utils/numUtils'
 
 export interface MonthlyDataRecord {
-  name: string
   team: string
+  name: string
   cost: number
 }
 
 export class MonthlyData {
   private data: MonthlyDataRecord[] | undefined = undefined
   private static SAVE_ROW_COUNT = 20
+  private static OLDEST_DATE = '2024-04-01'
 
   constructor(
     public readonly year: number,
@@ -22,14 +23,20 @@ export class MonthlyData {
   public getLabel(): string {
     return `${this.year.toString().padStart(4, '0')}-${this.month.toString().padStart(2, '0')}`
   }
+  public getFileName(): string {
+    return `${BASE_URL}${this.year.toString().padStart(4, '0')}-${this.month.toString().padStart(2, '0')}.csv`
+  }
+  private getTargeeDateString(): string {
+    return `${this.year.toString().padStart(4, '0')}-${this.month.toString().padStart(2, '0')}-01`
+  }
 
   public async get(name: string = '', team: string = ''): Promise<MonthlyDataRecord[] | undefined> {
-    if (dayjs(`${this.year}-${this.month}-01`) < dayjs('2024-06-01')) return undefined
+    if (dayjs(this.getTargeeDateString()) < dayjs(MonthlyData.OLDEST_DATE)) {
+      return undefined
+    }
 
     if (!this.data || this.getDate.isBefore(dayjs().subtract(1, 'day'))) {
-      const data: MonthlyDataRecord[] = await getHttpCsv(
-        `${BASE_URL}${this.year.toString().padStart(4, '0')}-${this.month.toString().padStart(2, '0')}.csv`
-      )
+      const data: MonthlyDataRecord[] = await getHttpCsv(this.getFileName())
       this.data = data.slice(0, MonthlyData.SAVE_ROW_COUNT).map((r) => {
         return {
           name: r.name,
@@ -46,7 +53,7 @@ export class MonthlyData {
     name: string = '',
     team: string = ''
   ): Promise<MonthlyDataRecord[] | undefined> {
-    if (dayjs(`${this.year}-${this.month}-01`).isBefore(dayjs('2024-06-01'))) return undefined
+    if (dayjs(this.getTargeeDateString()).isBefore(dayjs(MonthlyData.OLDEST_DATE))) return undefined
     const data = await this.get(name, team)
     return data
   }
