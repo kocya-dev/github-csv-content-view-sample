@@ -1,7 +1,7 @@
 <template>
-  <Menu />
+  <Actions />
 </template>
 
 <script lang="ts" setup>
-import Menu from '../components/Menu.vue'
+import Actions from '../components/Actions.vue'
 </script>
